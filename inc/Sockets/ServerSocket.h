@@ -25,6 +25,8 @@
 
 #include <stdint.h>
 
+namespace Sockets {
+
 class ServerSocket {
 public:
 					ServerSocket();
@@ -36,11 +38,14 @@ public:
 public:
 	void			bind(uint16_t port);
 	void			listen(uint16_t limit = 5);
+	void			close();
 
 private:
-	int				m_fpServerSocket;
+	int				m_fpSocket;
 	
 	void			(*onAccept)(int socket);
 };
+
+} /* namespace Sockets */
 
 #endif /* INC_SERVERSOCKET_H_ */
