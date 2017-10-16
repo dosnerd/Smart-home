@@ -29,21 +29,25 @@ namespace Sockets {
 
 class ServerSocket {
 public:
-					ServerSocket();
-	virtual 		~ServerSocket();
+						ServerSocket();
+						ServerSocket(int socketType);
+	virtual 			~ServerSocket();
 
 public:
-	void 			setOnAccept(void (*onAccept)(int socket));
+	inline void 		setOnAccept(void (*onAccept)(int socket)) { m_onAccept = onAccept; }
 	
 public:
-	void			bind(uint16_t port);
-	void			listen(uint16_t limit = 5);
-	void			close();
+	void				bind(uint16_t port);
+	virtual void		listen(uint16_t limit = 5);
+	void				close();
+
+protected:
+	inline const int	getSocket() { return m_fpSocket; }
+	inline void 		(*getOnAccept())(int socket) { return m_onAccept; };
 
 private:
-	int				m_fpSocket;
-	
-	void			(*onAccept)(int socket);
+	int					m_fpSocket;
+	void				(*m_onAccept)(int socket);
 };
 
 } /* namespace Sockets */

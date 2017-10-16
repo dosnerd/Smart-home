@@ -24,17 +24,23 @@
 #define BUFFER_SIZE 		1024
 #define DATA				"Hello world"
 
+#include <Errors.h>
+#include <iostream>
+#include <errno.h>
+
 #ifdef SERVER
 
 #include "Sockets/ServerSocket.h"
-#include <netinet/in.h>
-#include <iostream>
+#include "Sockets/Multicast.h"
 #include <cstring>
 #include <unistd.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #else
 
 #include "Sockets/ClientSocket.h"
+#include <sys/socket.h>
 
 #endif
 
@@ -42,43 +48,72 @@ void clientHandler(int socket);
 
 int main(int argc, char** argv) {
 
+	try {
+
 #ifndef SERVER
-	Sockets::ClientSocket client;
-	client.connect(argv[1], 59105);
-	client.send("Hello world", sizeof "Hello world");
-	client.close();
-
+		Sockets::ClientSocket client(SOCK_DGRAM);
+		client.setAddress(argv[1], 59105);
+		client.sendtoAddress("Hello world", sizeof "Hello world");
+//		client.connect(argv[1], 59105);
+//		client.send("Hello world", sizeof "Hello world");
+		client.close();
 #else
-	Sockets::ServerSocket server;
-	server.setOnAccept(&clientHandler);
-	server.bind(59105);
-	server.listen();
+//		Sockets::ServerSocket server;
+		Sockets::Multicast server;
+		server.setOnAccept(&clientHandler);
+		server.bind(59105);
+		server.join("ff12::1234", 0);
+		server.listen();
 
-	(void) argv;
+		(void) argv;
 #endif
+
+	} catch (ERRORS err) {
+		std::cerr << "E" << err << std::endl;
+		std::cerr << "errno: " << errno << std::endl;
+		return 1;
+	} catch (...) {
+		std::cerr << "Unexpected error" << std::endl;
+		return 1;
+	}
 
 	(void) argc;
 	(void) argv;
 	return 0;
 }
 
-
 #ifdef SERVER
 void clientHandler(int socket) {
-	ssize_t nBytes;
+	ssize_t nBytes, i;
+	struct sockaddr_in6 addr;
+	socklen_t addressLength = sizeof addr;
 	char buffer[BUFFER_SIZE];
 
 	while (1) {
-		if ((nBytes = read(socket, buffer, sizeof buffer)) < 0) {
+
+		if ((nBytes = ::recvfrom(socket, buffer, sizeof buffer, 0,
+				(struct sockaddr *) &addr, &addressLength)) < 0) {
 			std::cerr << "Reading stream error: " << std::endl;
 		} else if (nBytes == 0) {
 			std::cout << "Connection lost" << std::endl;
 			return;
 		} else {
-			std::cout << "Message inbound: " << buffer << std::endl;
+			std::cout << "Message inbound: ";
+
+			for (i = 0; i < nBytes; ++i) {
+				std::cout << buffer[i];
+			}
+			std::cout << std::endl;
+
+			if (inet_ntop(AF_INET6, &addr.sin6_addr, buffer, BUFFER_SIZE)
+					<= 0) {
+				std::cerr << "Can not format IPv6 address";
+			} else {
+				std::cout << "FROM: " << buffer << std::endl;
+			}
 		}
 
-		std::cout << "AV: " << nBytes << std::endl;
+		std::cout << "AV: " << nBytes << std::endl << std::endl;
 		std::memset(buffer, 0, sizeof buffer);
 	}
 }

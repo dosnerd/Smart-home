@@ -9,14 +9,17 @@
 
 #include <ERRORS.h>
 #include <sys/socket.h>
-//#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 
 namespace Sockets {
 
-ClientSocket::ClientSocket() {
-	m_fpSocket = ::socket(AF_INET, SOCK_STREAM, 0);
+ClientSocket::ClientSocket() :
+		ClientSocket(SOCK_STREAM)
+{
+}
+
+ClientSocket::ClientSocket(int type) {
+	m_fpSocket = ::socket(AF_INET6, type, 0);
 	if (m_fpSocket < 0)
 		throw ERRORS::SOCKET_NOT_CREATED;
 }
@@ -26,15 +29,11 @@ ClientSocket::~ClientSocket() {
 }
 
 void ClientSocket::connect(char *ipAddress, uint16_t port) {
-	struct sockaddr_in address;
-	address.sin_family = AF_INET;
-	address.sin_port = htons(port);
+	setAddress(ipAddress, port);
 
-	if (inet_pton(AF_INET, ipAddress, &address.sin_addr.s_addr) <= 0) {
-		throw ERRORS::PARSE_IPv4_ADDRES_FAILED;
-	}
-
-	if (::connect(m_fpSocket, (struct sockaddr *) &address, sizeof address)) {
+	if (::connect(m_fpSocket, (struct sockaddr *) &m_address,
+			sizeof m_address)) {
+		m_fpSocket = 0;
 		throw ERRORS::SOCKET_CONNECT_ERROR;
 	}
 }
@@ -45,9 +44,25 @@ void ClientSocket::send(const void *data, std::size_t size) {
 	}
 }
 
+void ClientSocket::setAddress(char *ipAddress, uint16_t port) {
+	m_address.sin6_family = AF_INET6;
+	m_address.sin6_port = htons(port);
+
+	if (inet_pton(AF_INET6, ipAddress, &m_address.sin6_addr) <= 0) {
+		m_fpSocket = 0;
+		throw ERRORS::PARSE_IPv4_ADDRES_FAILED;
+	}
+}
+
+void ClientSocket::sendtoAddress(const void *data, std::size_t size) {
+	if (::sendto(m_fpSocket, data, size, 0, (struct sockaddr *)&m_address, sizeof m_address) < 0){
+		throw ERRORS::SOCKET_SEND_ERROR;
+
+	}
+}
+
 void ClientSocket::close() {
 	if (m_fpSocket) {
-		send("CLOSE", sizeof "CLOSE");
 		::close(m_fpSocket);
 
 		m_fpSocket = 0;

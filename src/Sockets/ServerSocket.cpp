@@ -27,11 +27,21 @@
 #include <netinet/in.h>
 #include <unistd.h>
 
+#include <iostream>
+#include <arpa/inet.h>
+
 namespace Sockets {
 
 ServerSocket::ServerSocket() :
-		onAccept(0) {
-	m_fpSocket = ::socket(AF_INET, SOCK_STREAM, 0);
+		ServerSocket(SOCK_STREAM)
+{
+
+}
+
+ServerSocket::ServerSocket(int socketType) :
+		m_onAccept(0)
+{
+	m_fpSocket = ::socket(AF_INET6, socketType, 0);
 	if (m_fpSocket < 0)
 		throw ERRORS::SOCKET_NOT_CREATED;
 }
@@ -41,10 +51,13 @@ ServerSocket::~ServerSocket() {
 }
 
 void ServerSocket::bind(uint16_t port) {
-	struct sockaddr_in addr;
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons(port);
+	struct sockaddr_in6 addr = { AF_INET6, htons(port) };
+	int reuseValua = 1;
+
+	if (::setsockopt(m_fpSocket, SOL_SOCKET, SO_REUSEADDR, &reuseValua,
+			sizeof reuseValua) < 0) {
+		throw ERRORS::SOCKET_SET_REUSE_FAILED;
+	}
 
 	if (::bind(m_fpSocket, (struct sockaddr *) &addr, sizeof addr))
 		throw ERRORS::SOCKET_BIND_FAILED;
@@ -52,7 +65,8 @@ void ServerSocket::bind(uint16_t port) {
 
 void ServerSocket::listen(uint16_t limit) {
 	int newSocket;
-	struct sockaddr_in addr;
+	struct sockaddr_in6 addr;
+	char buff[2048];
 	socklen_t addressLength = sizeof addr;
 
 	if (::listen(m_fpSocket, limit) < 0)
@@ -65,17 +79,23 @@ void ServerSocket::listen(uint16_t limit) {
 		if (newSocket == -1)
 			throw ERRORS::SOCKET_ACCEPT_REFUSED;
 
-		onAccept(newSocket);
+		if (inet_ntop(AF_INET6, &addr.sin6_addr, buff, 2048) <= 0) {
+			std::cerr << "Can not format IPv6 address";
+		} else {
+			std::cout << "FROM: " << buff << std::endl;
+		}
+
+		m_onAccept(newSocket);
 		::close(newSocket);
 	}
 }
 
 void ServerSocket::close() {
-	::close(m_fpSocket);
-}
+	if (m_fpSocket) {
+		::close(m_fpSocket);
 
-void ServerSocket::setOnAccept(void (*onAccept)(int socket)) {
-	this->onAccept = onAccept;
+		m_fpSocket = 0;
+	}
 }
 
 } /* namespace Sockets */
