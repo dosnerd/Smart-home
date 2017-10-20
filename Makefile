@@ -28,9 +28,11 @@ CFLAGS += -Wall -Werror -Wtype-limits -Wuninitialized -Wunused-parameter -Wunuse
 LDFLAGS = -Os -Wl,-gc-sections 
 
 
-ifeq ($(TYPE),server)
-	CFLAGS += -D SERVER=1
-	PROJ_NAME := $(PROJ_NAME)_server
+ifdef TYPE
+	DEF = $(shell echo $(TYPE) | tr a-z A-Z)
+
+	CFLAGS += -D $(DEF)=1
+	PROJ_NAME := $(PROJ_NAME)_$(TYPE)
 endif
 
 LOCAL_INCLUDES =

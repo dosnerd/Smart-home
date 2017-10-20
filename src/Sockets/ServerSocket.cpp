@@ -53,7 +53,6 @@ ServerSocket::~ServerSocket() {
 void ServerSocket::bind(uint16_t port) {
 	struct sockaddr_in6 addr = { AF_INET6, htons(port) };
 	int reuseValua = 1;
-
 	if (::setsockopt(m_fpSocket, SOL_SOCKET, SO_REUSEADDR, &reuseValua,
 			sizeof reuseValua) < 0) {
 		throw ERRORS::SOCKET_SET_REUSE_FAILED;
@@ -65,7 +64,7 @@ void ServerSocket::bind(uint16_t port) {
 
 void ServerSocket::listen(uint16_t limit) {
 	int newSocket;
-	struct sockaddr_in6 addr;
+	struct sockaddr_in6 addr = { 0 };
 	char buff[2048];
 	socklen_t addressLength = sizeof addr;
 

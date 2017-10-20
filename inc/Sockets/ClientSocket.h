@@ -23,7 +23,8 @@ public:
 public:
 	void virtual	connect(char *ipAddress, uint16_t port);
 	void 			send(const void *data, std::size_t size);
-	void			setAddress(char *ipAddress, uint16_t port);
+	void			setAddress(const char *ipAddress, uint16_t port);
+	void			setAddress(sockaddr_in6 addr);
 	void			sendtoAddress(const void *data, std::size_t size);
 	void			close();
 

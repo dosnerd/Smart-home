@@ -18,7 +18,9 @@ ClientSocket::ClientSocket() :
 {
 }
 
-ClientSocket::ClientSocket(int type) {
+ClientSocket::ClientSocket(int type) :
+		m_address( { 0 })
+{
 	m_fpSocket = ::socket(AF_INET6, type, 0);
 	if (m_fpSocket < 0)
 		throw ERRORS::SOCKET_NOT_CREATED;
@@ -44,18 +46,24 @@ void ClientSocket::send(const void *data, std::size_t size) {
 	}
 }
 
-void ClientSocket::setAddress(char *ipAddress, uint16_t port) {
+void ClientSocket::setAddress(const char *ipAddress, uint16_t port) {
 	m_address.sin6_family = AF_INET6;
 	m_address.sin6_port = htons(port);
 
 	if (inet_pton(AF_INET6, ipAddress, &m_address.sin6_addr) <= 0) {
 		m_fpSocket = 0;
-		throw ERRORS::PARSE_IPv4_ADDRES_FAILED;
+		throw ERRORS::PARSE_IP_ADDRES_FAILED;
 	}
 }
 
+void ClientSocket::setAddress(sockaddr_in6 addr) {
+	m_address = addr;
+}
+
+
 void ClientSocket::sendtoAddress(const void *data, std::size_t size) {
-	if (::sendto(m_fpSocket, data, size, 0, (struct sockaddr *)&m_address, sizeof m_address) < 0){
+	if (::sendto(m_fpSocket, data, size, 0, (struct sockaddr *) &m_address,
+			sizeof m_address) < 0) {
 		throw ERRORS::SOCKET_SEND_ERROR;
 
 	}

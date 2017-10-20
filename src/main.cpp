@@ -20,15 +20,12 @@
  *   You should have received a copy of the GNU General Public License
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#define BUFFER_SIZE 		1024
-#define DATA				"Hello world"
-
 #include <Errors.h>
 #include <iostream>
 #include <errno.h>
 
 #ifdef SERVER
+#define BUFFER_SIZE 		1024
 
 #include "Sockets/ServerSocket.h"
 #include "Sockets/Multicast.h"
@@ -37,35 +34,43 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#else
-
-#include "Sockets/ClientSocket.h"
-#include <sys/socket.h>
-
+void server();
 #endif
 
+#ifdef CLIENT
+#include "Sockets/ClientSocket.h"
+#include <sys/socket.h>
+#define DATA			"Hello world"
+
 void clientHandler(int socket);
+void client(char **argv);
+#endif
+
+#ifdef SIGN_UP
+#define DATA			"Hello world"
+
+#include "SahomNetwork.h"
+#include "Memoryleak.h"
+
+void signup();
+#endif
 
 int main(int argc, char** argv) {
 
 	try {
-
-#ifndef SERVER
-		Sockets::ClientSocket client(SOCK_DGRAM);
-		client.setAddress(argv[1], 59105);
-		client.sendtoAddress("Hello world", sizeof "Hello world");
-//		client.connect(argv[1], 59105);
-//		client.send("Hello world", sizeof "Hello world");
-		client.close();
-#else
-//		Sockets::ServerSocket server;
-		Sockets::Multicast server;
-		server.setOnAccept(&clientHandler);
-		server.bind(59105);
-		server.join("ff12::1234", 0);
-		server.listen();
-
-		(void) argv;
+#ifdef CLIENT
+		client(argv);
+#endif
+#ifdef SERVER
+		server();
+#endif
+#ifdef SIGN_UP
+		signup();
+		if (Memory_leak::current.check()) {
+			std::cout << "One or more test has memory leaks" << std::endl;
+		} else {
+			std::cout << "All runned test passed memory leak test" << std::endl;
+		}
 #endif
 
 	} catch (ERRORS err) {
@@ -82,6 +87,31 @@ int main(int argc, char** argv) {
 	return 0;
 }
 
+#ifdef SIGN_UP
+void signup() {
+	SahomNetwork instance;
+	struct SahomNetwork::Message message;
+	instance.createMessage(&message, DATA, sizeof DATA);
+
+	message.structure->type = MESSAGE_TYPE_UNDEFINED;
+
+	instance.multicast(message, SahomNetwork::MULTICAST_SIGN_IN_CHANNEL);
+	instance.flush();
+}
+#endif
+
+#ifdef CLIENT
+void client(char **argv) {
+	Sockets::ClientSocket client(SOCK_DGRAM);
+	client.setAddress(argv[1], 59105);
+	client.sendtoAddress(DATA, sizeof DATA);
+//		client.connect(argv[1], 59105);
+//		client.send("Hello world", sizeof "Hello world");
+	client.close();
+	(void)argv;
+}
+#endif
+
 #ifdef SERVER
 void clientHandler(int socket) {
 	ssize_t nBytes, i;
@@ -92,7 +122,7 @@ void clientHandler(int socket) {
 	while (1) {
 
 		if ((nBytes = ::recvfrom(socket, buffer, sizeof buffer, 0,
-				(struct sockaddr *) &addr, &addressLength)) < 0) {
+								(struct sockaddr *) &addr, &addressLength)) < 0) {
 			std::cerr << "Reading stream error: " << std::endl;
 		} else if (nBytes == 0) {
 			std::cout << "Connection lost" << std::endl;
@@ -116,5 +146,15 @@ void clientHandler(int socket) {
 		std::cout << "AV: " << nBytes << std::endl << std::endl;
 		std::memset(buffer, 0, sizeof buffer);
 	}
+}
+void server() {
+//		Sockets::ServerSocket server;
+	Sockets::Multicast server;
+	server.setOnAccept(&clientHandler);
+	server.bind(59105);
+	server.join(argv[1], 0);
+	server.listen();
+
+	(void) argv;
 }
 #endif
