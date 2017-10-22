@@ -21,50 +21,76 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <SahomNetwork.h>
 #include <Sockets/ClientSocket.h>
+#include <Sockets/Multicast.h>
 #include <Errors.h>
 #include <cstring>
 #include <sys/socket.h>
+#include <SahomNetwork/Network.h>
 
 #include <iostream>
 
-SahomNetwork::SahomNetwork() {
+namespace SahomNetwork {
+
+Network::Network() {
 
 }
 
-SahomNetwork::~SahomNetwork() {
+Network::~Network() {
 
 }
 
-void SahomNetwork::multicast(struct Message message, DESTINATION destination) {
+void Network::requestSignIn() {
+	struct SahomNetwork::CommonHeader header;
+	struct SahomNetwork::StandardMessage message;
+
+	CreateMessage((Message *)&message, sizeof(*message.structure));
+	message.structure->command = STANDARD_MESSAGE_COMMAND_HELLO;
+	message.structure->nParameters = 0;
+
+	InitHeader(&header, message.raw, message.rawSize);
+	header.structure->type = MESSAGE_TYPE_STANDARD;
+	freeMessage((Message *) &message);
+
+	multicast(header, MULTICAST_SIGN_IN_CHANNEL);
+	flush();
+}
+
+void Network::multicast(struct CommonHeader message, DESTINATION destination) {
 	SendRequest *request = new SendRequest;
 
 	request->destination = destination;
 	request->message.raw = message.raw;
-	request->message.nMessage = message.nMessage;
+	request->message.rawSize = message.rawSize;
 	request->message.structure->version = SAHOM_VERSION;
 
 	m_multicastBuffer.push(request);
 }
 
-void SahomNetwork::createMessage(struct Message* message, const void* payload,
-		uint16_t size)
-{
-	message->nMessage = sizeof(*message->structure) + size;
-	message->raw = new uint8_t[message->nMessage];
+void Network::InitHeader(struct CommonHeader* header, const void* payload, uint16_t size) {
+	header->rawSize = sizeof(*header->structure) + size;
+	header->raw = new uint8_t[header->rawSize];
 
-	std::memcpy(message->raw, m_networkName, sizeof m_networkName);
-	message->structure->version = SAHOM_VERSION;
-	message->structure->size = size;
-	std::memcpy(message->raw + sizeof(*message->structure), payload, size);
+	std::memcpy(header->raw, m_networkName, sizeof m_networkName);
+	header->structure->version = SAHOM_VERSION;
+	header->structure->size = size;
+	std::memcpy(header->raw + sizeof(*header->structure), payload, size);
 }
 
-void SahomNetwork::freeMessage(struct Message* message) {
+void Network::CreateMessage(struct Message *message, uint16_t totalSize) {
+	message->rawSize = totalSize;
+	message->raw = new uint8_t[message->rawSize];
+}
+
+void Network::freeHeader(struct CommonHeader *header) {
+	delete header->raw;
+}
+
+void Network::freeMessage(struct Message *message) {
 	delete message->raw;
 }
 
-void SahomNetwork::flush() {
+void Network::flush() {
 	Sockets::ClientSocket socket(SOCK_DGRAM);
 	SendRequest *request;
 	sockaddr_in6 addr = { 0 };
@@ -85,10 +111,12 @@ void SahomNetwork::flush() {
 		}
 
 		socket.setAddress(addr);
-		socket.sendtoAddress(request->message.raw, request->message.nMessage);
-		freeMessage(&request->message);
+		socket.sendtoAddress(request->message.raw, request->message.rawSize);
+		freeHeader(&request->message);
 		delete request;
 	}
-	(void)request;
-	(void)addr;
+	(void) request;
+	(void) addr;
 }
+
+} /* namespace SahomNetwork */

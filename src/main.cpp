@@ -23,10 +23,12 @@
 #include <Errors.h>
 #include <iostream>
 #include <errno.h>
+#include <config.h>
 
 #ifdef SERVER
 #define BUFFER_SIZE 		1024
 
+#include <SahomNetwork/Network.h>
 #include "Sockets/ServerSocket.h"
 #include "Sockets/Multicast.h"
 #include <cstring>
@@ -35,6 +37,8 @@
 #include <arpa/inet.h>
 
 void server();
+void clientHandler(int socket);
+void signInHandler(int socket);
 #endif
 
 #ifdef CLIENT
@@ -42,14 +46,13 @@ void server();
 #include <sys/socket.h>
 #define DATA			"Hello world"
 
-void clientHandler(int socket);
 void client(char **argv);
 #endif
 
 #ifdef SIGN_UP
 #define DATA			"Hello world"
 
-#include "SahomNetwork.h"
+#include <SahomNetwork/Network.h>
 #include "Memoryleak.h"
 
 void signup();
@@ -89,14 +92,8 @@ int main(int argc, char** argv) {
 
 #ifdef SIGN_UP
 void signup() {
-	SahomNetwork instance;
-	struct SahomNetwork::Message message;
-	instance.createMessage(&message, DATA, sizeof DATA);
-
-	message.structure->type = MESSAGE_TYPE_UNDEFINED;
-
-	instance.multicast(message, SahomNetwork::MULTICAST_SIGN_IN_CHANNEL);
-	instance.flush();
+	SahomNetwork::Network instance;
+	instance.requestSignIn();
 }
 #endif
 
@@ -121,8 +118,7 @@ void clientHandler(int socket) {
 
 	while (1) {
 
-		if ((nBytes = ::recvfrom(socket, buffer, sizeof buffer, 0,
-								(struct sockaddr *) &addr, &addressLength)) < 0) {
+		if ((nBytes = ::recvfrom(socket, buffer, sizeof buffer, 0, (struct sockaddr *) &addr, &addressLength)) < 0) {
 			std::cerr << "Reading stream error: " << std::endl;
 		} else if (nBytes == 0) {
 			std::cout << "Connection lost" << std::endl;
@@ -135,8 +131,7 @@ void clientHandler(int socket) {
 			}
 			std::cout << std::endl;
 
-			if (inet_ntop(AF_INET6, &addr.sin6_addr, buffer, BUFFER_SIZE)
-					<= 0) {
+			if (inet_ntop(AF_INET6, &addr.sin6_addr, buffer, BUFFER_SIZE) <= 0) {
 				std::cerr << "Can not format IPv6 address";
 			} else {
 				std::cout << "FROM: " << buffer << std::endl;
@@ -147,14 +142,64 @@ void clientHandler(int socket) {
 		std::memset(buffer, 0, sizeof buffer);
 	}
 }
+
+void signInHandler(int socket) {
+	ssize_t nBytes;
+	uint8_t i;
+	char  buffer[BUFFER_SIZE];
+	struct sockaddr_in6 addr;
+	socklen_t addressLength = sizeof addr;
+	SahomNetwork::StandardMessage standardMessage;
+
+	SahomNetwork::CommonHeader header;
+	header.rawSize = BUFFER_SIZE;
+	header.raw = new uint8_t[header.rawSize];
+
+	while (1) {
+		if ((nBytes = ::recvfrom(socket, header.raw, header.rawSize, 0, (struct sockaddr *) &addr, &addressLength)) < 0) {
+			std::cerr << "Reading stream error: " << std::endl;
+		} else if (nBytes == 0) {
+			std::cout << "Connection lost" << std::endl;
+			return;
+		} else {
+			std::cout << "Message inbound from: ";
+			if (inet_ntop(AF_INET6, &addr.sin6_addr, buffer, BUFFER_SIZE) <= 0) {
+				std::cerr << "E" << ERRORS::PARSE_IP_ADDRES_FAILED;
+			} else {
+				std::cout << buffer << std::endl;
+			}
+
+			std::cout << "Network name:\t" << header.structure->networkName << std::endl;
+			std::cout << "Version:\t" << header.structure->version + 0 << std::endl;
+			std::cout << "Type:\t\t" << header.structure->type + 0 << std::endl;
+			std::cout << "Size:\t\t" << header.structure->size << std::endl << std::endl;
+
+			if (header.structure->type == MESSAGE_TYPE_STANDARD) {
+				std::cout << "STANDARD MESSAGE: " << std::endl;
+				standardMessage.rawSize = header.structure->size;
+				standardMessage.raw = header.structure->payload;
+
+				std::cout << "Command:\t"<< standardMessage.structure->command + 0 << std::endl;
+				std::cout << "Count params:\t"<< standardMessage.structure->nParameters + 0 << std::endl;
+
+				for (i = 0; i < standardMessage.structure->nParameters; ++i) {
+					std::cout << "\t["<< i + 0 << "]: " << standardMessage.structure->parameters[i] + 0 << std::endl;
+				}
+			}
+		}
+
+		std::cout << std::endl << "AV: " << nBytes << std::endl << std::endl;
+		std::memset(header.raw, 0, sizeof header.rawSize);
+	}
+}
+
 void server() {
 //		Sockets::ServerSocket server;
 	Sockets::Multicast server;
-	server.setOnAccept(&clientHandler);
+	server.setOnAccept(&signInHandler);
 	server.bind(59105);
-	server.join(argv[1], 0);
+	server.join(SIGN_IN_CHANNEL, 0);
 	server.listen();
-
-	(void) argv;
 }
+
 #endif
