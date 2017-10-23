@@ -4,6 +4,9 @@
 .PHONY: 				all
 all:					$(DIR_BIN)$(PROJ_NAME)
 							@echo "Done"
+$(info ------------INFO-----------)
+$(shell $(CXX) -v)
+$(info ------START COMPILING------)
 
 dir 	:= 		$(DIR_SRC)
 include 		$(DIR_SRC)Rules.mk

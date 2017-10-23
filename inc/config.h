@@ -29,5 +29,6 @@
 
 #define SAHOM_PORT					59105
 #define	SIGN_IN_CHANNEL				{ { { 0xFF,0x12,0,0,0,0,0,0,0,0,0,0,0,0,0xBE,0xEF } } }
+#define GENERAL_BUFFER_SIZE			1024
 
 #endif /* INC_CONFIG_H_ */

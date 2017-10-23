@@ -24,6 +24,8 @@
 #ifndef INC_MESSAGES_H_
 #define INC_MESSAGES_H_
 
+#include <config.h>
+
 #define MESSAGE_TYPE_UNDEFINED		0
 #define MESSAGE_TYPE_STANDARD		1
 
@@ -52,9 +54,10 @@ struct Message {
 	uint16_t rawSize;
 };
 
-#define STANDARD_MESSAGE_COMMAND_NONE			0;
-#define STANDARD_MESSAGE_COMMAND_HELLO			1;
-#define STANDARD_MESSAGE_COMMAND_SIGN_IN		2;
+#define STANDARD_MESSAGE_COMMAND_NONE			0
+#define STANDARD_MESSAGE_COMMAND_SCAN			1
+#define STANDARD_MESSAGE_COMMAND_SCAN_REACT		2
+#define STANDARD_MESSAGE_COMMAND_SIGN_IN		3
 
 struct StandardMessage {
 	union {

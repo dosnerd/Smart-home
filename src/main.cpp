@@ -54,6 +54,8 @@ void client(char **argv);
 
 #include <SahomNetwork/Network.h>
 #include "Memoryleak.h"
+#include <thread>
+#include <unistd.h>
 
 void signup();
 #endif
@@ -91,9 +93,21 @@ int main(int argc, char** argv) {
 }
 
 #ifdef SIGN_UP
+void startListening() {
+	SahomNetwork::Network::getInstance()->listen();
+}
+
 void signup() {
-	SahomNetwork::Network instance;
-	instance.requestSignIn();
+	SahomNetwork::Network *instance = SahomNetwork::Network::getInstance();
+	std::thread server(startListening);
+	instance->scan();
+
+	while (true) {
+		usleep(5 * 1000);
+		instance->flush();
+	}
+
+	server.join();
 }
 #endif
 
@@ -146,7 +160,7 @@ void clientHandler(int socket) {
 void signInHandler(int socket) {
 	ssize_t nBytes;
 	uint8_t i;
-	char  buffer[BUFFER_SIZE];
+	char buffer[BUFFER_SIZE];
 	struct sockaddr_in6 addr;
 	socklen_t addressLength = sizeof addr;
 	SahomNetwork::StandardMessage standardMessage;

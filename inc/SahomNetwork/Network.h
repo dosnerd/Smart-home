@@ -26,16 +26,15 @@
 
 #include <stdint.h>
 #include <queue>
-#include <config.h>
+#include <Sockets/Multicast.h>
 #include "Messages.h"
 
 namespace SahomNetwork {
 
 class Network {
 public:
-								Network();
-	virtual 					~Network();
-
+	static Network				*getInstance();
+	static void					destroyInstance();
 public:
 	typedef enum {
 		MULTICAST_SIGN_IN_CHANNEL,
@@ -48,11 +47,22 @@ public:
 	void						freeMessage(struct Message *message);
 
 public:
-	void						requestSignIn();
-	void						multicast(struct CommonHeader message, DESTINATION destination);
+	void						scan();
+	void						multicast(struct CommonHeader header, DESTINATION destination);
 	void						flush();
+	void						listen();
+
 
 private:
+								Network();
+	virtual 					~Network();
+
+private:
+	static void					listener(int socket);
+	void						scanHandler();
+
+private:
+	static Network				*m_sInstance;
 	struct						SendRequest {
 		DESTINATION					destination;
 		struct CommonHeader				message;
@@ -60,6 +70,7 @@ private:
 
 	uint8_t 					m_networkName[30] = {'M', 'y', ' ', 'S', 'a', 'h', 'o', 'm', 0};
 	std::queue<SendRequest *>	m_multicastBuffer;
+	Sockets::Multicast			m_multicastListener;
 };
 
 } /* namespace SahomNetwork */

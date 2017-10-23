@@ -25,7 +25,7 @@ OBJCOPY=arm-linux-gnueabihf-objcopy
 CFLAGS  = -O$(OPT)
 CFLAGS  = -Iinc/
 CFLAGS += -Wall -Werror -Wtype-limits -Wuninitialized -Wunused-parameter -Wunused-but-set-parameter -Wempty-body   
-LDFLAGS = -Os -Wl,-gc-sections 
+LDFLAGS = -Os -Wl,-gc-sections -pthread 
 
 
 ifdef TYPE
