@@ -1,7 +1,7 @@
 /*
- * config.h
+ * DiscoveryHandlers.h
  *
- *  Created on: 16 okt. 2017
+ *  Created on: 23 okt. 2017
  *      Author: David de Prez
  *
  *
@@ -21,18 +21,33 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_CONFIG_H_
-#define INC_CONFIG_H_
+#ifndef INC_SAHOMNETWORK_DISCOVERYHANDLERS_H_
+#define INC_SAHOMNETWORK_DISCOVERYHANDLERS_H_
 
+#include <SahomNetwork/Handlers.h>
 
-#define SAHOM_VERSION				0x00			//MAX 0xFF
-#define ALLOW_LOG					1
-#define ALLOW_ERRORS				1
+namespace SahomNetwork {
 
-#define SAHOM_PORT					59105
-#define	SIGN_IN_CHANNEL				{ { { 0xFF,0x12,0,0,0,0,0,0,0,0,0,0,0,0,0xBE,0xEF } } }
-#define GENERAL_BUFFER_SIZE			1024
+class Network;
+class DiscoveryHandlers: public Handlers {
+public:
+						DiscoveryHandlers();
+	virtual 			~DiscoveryHandlers();
 
-#define NETWORK_STAY_LISTENING		0x1
+public:
+	virtual bool		hasHandler(uint16_t command);
+	virtual void		callHandler(struct CommonHeader &header);
 
-#endif /* INC_CONFIG_H_ */
+	virtual Handlers	*clone() const;
+
+public:
+	void				scanHandler();
+	void				scanResponseHandler(struct CommonHeader &header);
+
+private:
+	Network				*m_networkInstance;
+};
+
+} /* namespace SahomNetwork */
+
+#endif /* INC_SAHOMNETWORK_DISCOVERYHANDLERS_H_ */

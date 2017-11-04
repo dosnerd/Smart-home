@@ -23,6 +23,8 @@
 
 #include "ServerSocket.h"
 #include <Errors.h>
+#include <Log.h>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -79,9 +81,9 @@ void ServerSocket::listen(uint16_t limit) {
 			throw ERRORS::SOCKET_ACCEPT_REFUSED;
 
 		if (inet_ntop(AF_INET6, &addr.sin6_addr, buff, 2048) <= 0) {
-			std::cerr << "Can not format IPv6 address";
+			ERROR("SERVER SOCKET", "Can not format IPv6 address");
 		} else {
-			std::cout << "FROM: " << buff << std::endl;
+			LOG("SERVER SOCKET", "FROM: " << buff);
 		}
 
 		m_onAccept(newSocket);

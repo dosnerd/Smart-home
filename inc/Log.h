@@ -1,7 +1,7 @@
 /*
- * config.h
+ * Log.h
  *
- *  Created on: 16 okt. 2017
+ *  Created on: 23 okt. 2017
  *      Author: David de Prez
  *
  *
@@ -21,18 +21,31 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_CONFIG_H_
-#define INC_CONFIG_H_
+#ifndef INC_LOG_H_
+#define INC_LOG_H_
 
+#include <config.h>
 
-#define SAHOM_VERSION				0x00			//MAX 0xFF
-#define ALLOW_LOG					1
-#define ALLOW_ERRORS				1
+#if ALLOW_LOG || ALLOW_ERRORS
+#include <iostream>
+#endif
 
-#define SAHOM_PORT					59105
-#define	SIGN_IN_CHANNEL				{ { { 0xFF,0x12,0,0,0,0,0,0,0,0,0,0,0,0,0xBE,0xEF } } }
-#define GENERAL_BUFFER_SIZE			1024
+#if ALLOW_LOG
+#define LOG(FROM, MESSAGE) 					\
+	std::cout << "LOG (" << FROM << "):" << \
+	std::endl << MESSAGE << std::endl << 	\
+	std::endl
+#else
+#define LOG(FROM, MESSAGE)
+#endif
 
-#define NETWORK_STAY_LISTENING		0x1
+#if ALLOW_ERRORS
+#define ERROR(FROM, MESSAGE) 				\
+	std::cerr << "ERROR (" << FROM << "):" <<	\
+	std::endl << MESSAGE << std::endl << 	\
+	std::endl
+#else
+#define ERROR(FROM, MESSAGE)
+#endif
 
-#endif /* INC_CONFIG_H_ */
+#endif /* INC_LOG_H_ */

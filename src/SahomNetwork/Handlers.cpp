@@ -1,7 +1,7 @@
 /*
- * config.h
+ * Handler.cpp
  *
- *  Created on: 16 okt. 2017
+ *  Created on: 23 okt. 2017
  *      Author: David de Prez
  *
  *
@@ -21,18 +21,14 @@
  *   along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef INC_CONFIG_H_
-#define INC_CONFIG_H_
+#include <SahomNetwork/Handlers.h>
 
+namespace SahomNetwork {
 
-#define SAHOM_VERSION				0x00			//MAX 0xFF
-#define ALLOW_LOG					1
-#define ALLOW_ERRORS				1
+Handlers::Handlers() {
+}
 
-#define SAHOM_PORT					59105
-#define	SIGN_IN_CHANNEL				{ { { 0xFF,0x12,0,0,0,0,0,0,0,0,0,0,0,0,0xBE,0xEF } } }
-#define GENERAL_BUFFER_SIZE			1024
+Handlers::~Handlers() {
+}
 
-#define NETWORK_STAY_LISTENING		0x1
-
-#endif /* INC_CONFIG_H_ */
+} /* namespace SahomNetwork */

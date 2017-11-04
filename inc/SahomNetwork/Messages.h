@@ -34,13 +34,18 @@ namespace SahomNetwork {
 struct CommonHeader {
 	union {
 		struct {
-			uint8_t networkName[30] = { 0 }; 	// ASCII null terminated string
-			uint8_t version = SAHOM_VERSION; 	// Version of SaHoM that sender runs
-			uint8_t type;						// Type of payload
-			uint16_t size;						// Length payload
-			uint8_t payload[];					// Payload
-		}*structure;
-		uint8_t *raw;
+			uint8_t		networkName[30] = { 0 }; 	// ASCII null terminated string
+			uint8_t		version = SAHOM_VERSION; 	// Version of SaHoM that sender runs
+			struct {
+				char		require_confirm : 1;
+				char		received		: 1;
+			} 			option = { 0 };
+			uint8_t		type;						// Type of payload
+			uint16_t	size;						// Length payload
+			uint8_t		payload[];					// Payload
+
+		}			*structure;
+		uint8_t 	*raw;
 	};
 	uint16_t rawSize;
 };
@@ -56,8 +61,7 @@ struct Message {
 
 #define STANDARD_MESSAGE_COMMAND_NONE			0
 #define STANDARD_MESSAGE_COMMAND_SCAN			1
-#define STANDARD_MESSAGE_COMMAND_SCAN_REACT		2
-#define STANDARD_MESSAGE_COMMAND_SIGN_IN		3
+#define STANDARD_MESSAGE_COMMAND_SIGN_IN		2
 
 struct StandardMessage {
 	union {

@@ -26,11 +26,13 @@
 
 #include <stdint.h>
 #include <queue>
+#include <vector>
 #include <Sockets/Multicast.h>
 #include "Messages.h"
 
 namespace SahomNetwork {
 
+class Handlers;
 class Network {
 public:
 	static Network				*getInstance();
@@ -49,8 +51,10 @@ public:
 public:
 	void						scan();
 	void						multicast(struct CommonHeader header, DESTINATION destination);
+	void						addMessageHandler(Handlers *handler);
 	void						flush();
 	void						listen();
+	void						stopListening();
 
 
 private:
@@ -59,7 +63,6 @@ private:
 
 private:
 	static void					listener(int socket);
-	void						scanHandler();
 
 private:
 	static Network				*m_sInstance;
@@ -68,9 +71,12 @@ private:
 		struct CommonHeader				message;
 	};
 
+	uint8_t						m_settings;
 	uint8_t 					m_networkName[30] = {'M', 'y', ' ', 'S', 'a', 'h', 'o', 'm', 0};
 	std::queue<SendRequest *>	m_multicastBuffer;
 	Sockets::Multicast			m_multicastListener;
+
+	std::vector<Handlers *>		m_handlers;
 };
 
 } /* namespace SahomNetwork */
