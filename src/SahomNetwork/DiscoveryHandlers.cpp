@@ -84,23 +84,8 @@ bool DiscoveryHandlers::isUID(DeviceUID &other) {
 	if (other.raw == nullptr)
 		return false;
 
-	return compareUIDS(m_uid, other);
-}
 
-bool DiscoveryHandlers::compareUIDS(DeviceUID &a, DeviceUID &b) {
-	uint8_t i;
-
-	//Device UID should always as small as possible, meaning if size isn't same, UID can not be the same
-	if (a.structure->size != b.structure->size) {
-		return false;
-	}
-
-	for (i = 0; i < a.structure->size; i++) {
-		if (a.structure->UID[i] != b.structure->UID[i])
-			return false;
-	}
-
-	return true;
+	return Messages::compareDeviceUIDS(m_uid, other);
 }
 
 bool DiscoveryHandlers::hasHandler(uint16_t command) {
@@ -136,41 +121,22 @@ Handlers* DiscoveryHandlers::clone() const {
 	return new DiscoveryHandlers(*this);
 }
 
-void DiscoveryHandlers::whoIs(DeviceUID &uid, void (*callback)(struct in6_addr)) {
-	StandardMessage message;
-	CommonHeader header;
-	uint8_t i;
+void DiscoveryHandlers::scan() {
+	struct SahomNetwork::CommonHeader header;
+	struct SahomNetwork::StandardMessage message;
 
-	if (!m_networkInstance->isConnected()) {
-		return;
-	}
-
-	for (i = 0; i < WHO_IS_LIMIT; ++i) {
-		if (m_aUnknownDevices[i].rawSize == 0 || compareUIDS(m_aUnknownDevices[i], uid)) {
-			m_aUnknownDevices[i].raw = new uint8_t[uid.rawSize];
-			m_aUnknownDevices[i].rawSize = uid.rawSize;
-			std::memcpy(m_aUnknownDevices[i].raw, uid.raw, uid.rawSize);
-
-			m_aCallBacks[i].push(callback);
-			break;
-		}
-	}
-
-	if (i == WHO_IS_LIMIT) {
-		WARNING("DISCOVERY", "WHO IS buffer overflow!");
-		return;
-	}
-
-	m_networkInstance->CreateMessage((Message *) &message, sizeof(message.structure) + uid.structure->size);
-	message.structure->command = STANDARD_MESSAGE_COMMAND_WHO_IS;
-	std::memcpy(&message.structure->nParameters, &uid.structure->size, sizeof(uid.structure->size) + uid.structure->size);
+	m_networkInstance->CreateMessage((Message *) &message, sizeof(*message.structure));
+	message.structure->command = STANDARD_MESSAGE_COMMAND_SCAN;
+	message.structure->nParameters = 0;
 
 	m_networkInstance->InitHeader(&header, message.raw, message.rawSize);
 	header.structure->type = MESSAGE_TYPE_STANDARD;
+	header.structure->option.all_networks = 1;
 	header.structure->option.require_confirm = 1;
 	m_networkInstance->freeMessage((Message *) &message);
 
-	m_networkInstance->multicast(header, Network::DESTINATION::MULTICAST_WHO_IS);
+	m_networkInstance->multicast(header, Network::DESTINATION::MULTICAST_SIGN_IN_CHANNEL);
+	m_networkInstance->flush();
 }
 
 void DiscoveryHandlers::scanHandler() {
@@ -195,6 +161,43 @@ void DiscoveryHandlers::scanHandler() {
 
 void DiscoveryHandlers::scanResponseHandler(const struct CommonHeader &header) {
 	LOG("DISCOVERY", "Network found: " << header.structure->networkName);
+}
+
+void DiscoveryHandlers::whoIs(DeviceUID &uid, void (*callback)(struct in6_addr)) {
+	StandardMessage message;
+	CommonHeader header;
+	uint8_t i;
+
+	if (!m_networkInstance->isConnected()) {
+		return;
+	}
+
+	for (i = 0; i < WHO_IS_LIMIT; ++i) {
+		if (m_aUnknownDevices[i].rawSize == 0 || Messages::compareDeviceUIDS(m_aUnknownDevices[i], uid)) {
+			m_aUnknownDevices[i].raw = new uint8_t[uid.rawSize];
+			m_aUnknownDevices[i].rawSize = uid.rawSize;
+			std::memcpy(m_aUnknownDevices[i].raw, uid.raw, uid.rawSize);
+
+			m_aCallBacks[i].push(callback);
+			break;
+		}
+	}
+
+	if (i == WHO_IS_LIMIT) {
+		WARNING("DISCOVERY", "WHO IS buffer overflow!");
+		return;
+	}
+
+	m_networkInstance->CreateMessage((Message *) &message, sizeof(message.structure) + uid.structure->size);
+	message.structure->command = STANDARD_MESSAGE_COMMAND_WHO_IS;
+	std::memcpy(&message.structure->nParameters, &uid.structure->size, sizeof(uid.structure->size) + uid.structure->size);
+
+	m_networkInstance->InitHeader(&header, message.raw, message.rawSize);
+	header.structure->type = MESSAGE_TYPE_STANDARD;
+	header.structure->option.require_confirm = 1;
+	m_networkInstance->freeMessage((Message *) &message);
+
+	m_networkInstance->multicast(header, Network::DESTINATION::MULTICAST_WHO_IS);
 }
 
 void DiscoveryHandlers::whoIsHandler(const struct CommonHeader &header, struct in6_addr &addr) {
@@ -244,7 +247,7 @@ void DiscoveryHandlers::whoIsResponseHandler(const struct CommonHeader &header, 
 	std::memcpy(uid.raw, &message.structure->nParameters, sizeof(uid.structure->size) + uidSize);
 
 	for (i = 0; i < WHO_IS_LIMIT; ++i) {
-		if (m_aUnknownDevices[i].rawSize != 0 && compareUIDS(m_aUnknownDevices[i], uid)) {
+		if (m_aUnknownDevices[i].rawSize != 0 && Messages::compareDeviceUIDS(m_aUnknownDevices[i], uid)) {
 			while (m_aCallBacks[i].size() > 0) {
 				m_aCallBacks[i].front()(addr);
 				m_aCallBacks[i].pop();

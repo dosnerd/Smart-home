@@ -112,8 +112,10 @@ void start(SahomNetwork::DeviceUID uid) {
 	SahomNetwork::DiscoveryHandlers discovery(uid);
 
 	try {
+		LOG("MAIN", "Current network: '" << instance->getNetworkName() << "'");
+
 		instance->addMessageHandler(discovery);
-		instance->scan();
+		SahomNetwork::DiscoveryHandlers::getLastInstance()->scan();
 
 		//make sure it won't react on it own scan request (faking connecting to system)
 		sleep(1);

@@ -52,6 +52,7 @@ public:
 	virtual Handlers							*clone() const;
 
 public:
+	void										scan();
 	bool										lookup(DeviceUID &uid, struct in6_addr *buffer);
 	void										whoIs(DeviceUID &uid, void (*callback)(struct in6_addr));
 
@@ -60,9 +61,6 @@ private:
 	void										scanResponseHandler(const struct CommonHeader &header);
 	void										whoIsHandler(const struct CommonHeader &header, struct in6_addr &addr);
 	void										whoIsResponseHandler(const struct CommonHeader &header, struct in6_addr &addr);
-
-private:
-	bool										compareUIDS(DeviceUID &a, DeviceUID &b);
 
 private:
 	static DiscoveryHandlers					*m_sLastInstance;

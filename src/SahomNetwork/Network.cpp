@@ -88,23 +88,6 @@ void Network::freeMessage(struct Message *message) {
 	delete[] message->raw;
 }
 
-void Network::scan() {
-	struct SahomNetwork::CommonHeader header;
-	struct SahomNetwork::StandardMessage message;
-
-	CreateMessage((Message *) &message, sizeof(*message.structure));
-	message.structure->command = STANDARD_MESSAGE_COMMAND_SCAN;
-	message.structure->nParameters = 0;
-
-	InitHeader(&header, message.raw, message.rawSize);
-	header.structure->type = MESSAGE_TYPE_STANDARD;
-	header.structure->option.require_confirm = 1;
-	freeMessage((Message *) &message);
-
-	multicast(header, MULTICAST_SIGN_IN_CHANNEL);
-	flush();
-}
-
 void Network::multicast(struct CommonHeader &header, DESTINATION destination) {
 	SendRequest *request = new SendRequest;
 
@@ -147,7 +130,7 @@ void Network::flush() {
 			addr.sin6_addr = SIGN_IN_CHANNEL;
 			break;
 
-		case DESTINATION::MULTICAST_WHO_IS:
+			case DESTINATION::MULTICAST_WHO_IS:
 			addr.sin6_addr = WHO_IS_CHANNEL;
 			break;
 
@@ -196,6 +179,13 @@ void Network::listener(int socket) {
 			getInstance()->stopListening();
 			continue;
 		} else {
+			if (
+					!header.structure->option.all_networks &&
+					getInstance()->isConnected() &&
+					!Messages::compareNetworkName(header.structure->networkName, getInstance()->getNetworkName())) {
+				continue;
+			}
+
 			if (header.structure->type == MESSAGE_TYPE_STANDARD) {
 				standardMessage.rawSize = header.structure->size;
 				standardMessage.raw = header.structure->payload;
@@ -225,6 +215,10 @@ bool Network::isStayListening() {
 
 bool Network::isConnected() {
 	return m_stSettings.connected;
+}
+
+const uint8_t *Network::getNetworkName() const {
+	return m_networkName;
 }
 
 void Network::setConnected(bool connected) {

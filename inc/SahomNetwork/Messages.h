@@ -25,6 +25,7 @@
 #define INC_MESSAGES_H_
 
 #include <config.h>
+#include <stdint.h>
 
 #define MESSAGE_TYPE_UNDEFINED		0
 #define MESSAGE_TYPE_STANDARD		1
@@ -48,6 +49,7 @@ struct CommonHeader {
 			uint8_t		networkName[30] = { 0 }; 	// ASCII null terminated string
 			uint8_t		version = SAHOM_VERSION; 	// Version of SaHoM that sender runs
 			struct {
+				char		all_networks	: 1;
 				char		require_confirm : 1;
 				char		received		: 1;
 			} 			option = { 0 };
@@ -90,6 +92,17 @@ struct StandardMessage {
 	uint16_t rawSize = 0;
 };
 
+class Messages {
+public:
+	static bool		compareNetworkName(const uint8_t a[30], const uint8_t b[30]);
+	static bool 	compareDeviceUIDS(struct DeviceUID &a, struct DeviceUID &b);
+
+private:
+					Messages();
+	virtual 		~Messages();
+};
+
 } /* namespace SahomNetwork */
+
 
 #endif /* INC_MESSAGES_H_ */
