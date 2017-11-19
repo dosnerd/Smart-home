@@ -24,15 +24,22 @@
 #ifndef INC_CONFIG_H_
 #define INC_CONFIG_H_
 
-
+////////////GENERAL////////////
 #define SAHOM_VERSION				0x00			//MAX 0xFF
-#define ALLOW_LOG					1
+#define ALLOW_LOGS					1
+#define ALLOW_WARNINGS				1
 #define ALLOW_ERRORS				1
-
-#define SAHOM_PORT					59105
-#define	SIGN_IN_CHANNEL				{ { { 0xFF,0x12,0,0,0,0,0,0,0,0,0,0,0,0,0xBE,0xEF } } }
 #define GENERAL_BUFFER_SIZE			1024
 
+////////////PORTS & CHANNELS////////////
+#define SAHOM_PORT					59105
+#define	SIGN_IN_CHANNEL				{ { { 0xFF,0x12,0,0,0,0,0,0,0,0,0,0,0,0,0xBE,0xEF } } }
+#define	WHO_IS_CHANNEL				{ { { 0xFF,0x12,0,0,0,0,0,0,0,0,0,0,0,0,0xBE,0xEB } } }
+
+////////////NETWORK SETTINGS////////////
 #define NETWORK_STAY_LISTENING		0x1
+
+////////////DISCOVERY SETTINGS////////////
+#define WHO_IS_LIMIT				5
 
 #endif /* INC_CONFIG_H_ */

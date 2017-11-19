@@ -30,13 +30,22 @@
 #include <iostream>
 #endif
 
-#if ALLOW_LOG
+#if ALLOW_LOGS
 #define LOG(FROM, MESSAGE) 					\
 	std::cout << "LOG (" << FROM << "):" << \
 	std::endl << MESSAGE << std::endl << 	\
 	std::endl
 #else
 #define LOG(FROM, MESSAGE)
+#endif
+
+#if ALLOW_WARNINGS
+#define WARNING(FROM, MESSAGE) 					\
+	std::cout << "WARNING (" << FROM << "):" << \
+	std::endl << MESSAGE << std::endl << 	\
+	std::endl
+#else
+#define WARNING(FROM, MESSAGE)
 #endif
 
 #if ALLOW_ERRORS

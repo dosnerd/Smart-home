@@ -31,6 +31,17 @@
 
 namespace SahomNetwork {
 
+struct DeviceUID {
+	union {
+		struct {
+			uint8_t	size;
+			uint8_t	UID[];
+		}		*structure;
+		uint8_t	*raw;
+	};
+	uint16_t rawSize = 0;
+};
+
 struct CommonHeader {
 	union {
 		struct {
@@ -47,7 +58,8 @@ struct CommonHeader {
 		}			*structure;
 		uint8_t 	*raw;
 	};
-	uint16_t rawSize;
+	uint16_t 	rawSize = 0;
+	DeviceUID	*UID = nullptr;
 };
 
 struct Message {
@@ -56,23 +68,26 @@ struct Message {
 		} *structure;
 		uint8_t *raw;
 	};
-	uint16_t rawSize;
+	uint16_t rawSize = 0;
 };
 
 #define STANDARD_MESSAGE_COMMAND_NONE			0
 #define STANDARD_MESSAGE_COMMAND_SCAN			1
 #define STANDARD_MESSAGE_COMMAND_SIGN_IN		2
+#define STANDARD_MESSAGE_COMMAND_WHO_IS			3
+
+#define STANDARD_MESSAGE_COMMAND_
 
 struct StandardMessage {
 	union {
 		struct {
-			uint16_t command;
-			uint8_t nParameters;
-			uint8_t parameters[0];
-		}*structure;
-		uint8_t *raw;
+			uint16_t 	command;
+			uint8_t 	nParameters;
+			uint8_t 	parameters[0];
+		}			*structure;
+		uint8_t 	*raw;
 	};
-	uint16_t rawSize;
+	uint16_t rawSize = 0;
 };
 
 } /* namespace SahomNetwork */

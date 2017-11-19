@@ -24,7 +24,7 @@
 #include <Memoryleak.h>
 #include <iostream>
 
-Memory_leak Memory_leak::current;
+//Memory_leak Memory_leak::current;
 
 Memory_leak::Memory_leak()
 	: m_nPointers(0)

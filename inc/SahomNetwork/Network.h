@@ -40,6 +40,7 @@ public:
 public:
 	typedef enum {
 		MULTICAST_SIGN_IN_CHANNEL,
+		MULTICAST_WHO_IS,
 	} DESTINATION;
 
 public:
@@ -50,11 +51,18 @@ public:
 
 public:
 	void						scan();
-	void						multicast(struct CommonHeader header, DESTINATION destination);
-	void						addMessageHandler(Handlers *handler);
+	void						multicast(struct CommonHeader &header, DESTINATION destination);
+	void						unicast(struct CommonHeader &header, in6_addr &destination);
+	void						addMessageHandler(Handlers &handler);
 	void						flush();
 	void						listen();
 	void						stopListening();
+	
+public:
+	bool						isStayListening();
+	bool						isConnected();
+
+	void						setConnected(bool connected);
 
 
 private:
@@ -71,7 +79,13 @@ private:
 		struct CommonHeader				message;
 	};
 
-	uint8_t						m_settings;
+	union {
+		struct {
+			uint8_t					stayListening	: 1;
+			uint8_t					connected		: 1;
+		} 						m_stSettings;
+		uint8_t					m_settings;
+	};
 	uint8_t 					m_networkName[30] = {'M', 'y', ' ', 'S', 'a', 'h', 'o', 'm', 0};
 	std::queue<SendRequest *>	m_multicastBuffer;
 	Sockets::Multicast			m_multicastListener;

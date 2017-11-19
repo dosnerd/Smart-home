@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include "Messages.h"
+#include <netinet/in.h>
 
 namespace SahomNetwork {
 
@@ -36,7 +37,7 @@ public:
 
 public:
 	virtual bool		hasHandler(uint16_t command) = 0;
-	virtual void		callHandler(struct CommonHeader &header) = 0;
+	virtual void		callHandler(const struct CommonHeader &header, struct in6_addr &addr) = 0;
 
 	virtual Handlers	*clone() const = 0;
 };

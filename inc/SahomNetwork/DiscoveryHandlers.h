@@ -25,27 +25,54 @@
 #define INC_SAHOMNETWORK_DISCOVERYHANDLERS_H_
 
 #include <SahomNetwork/Handlers.h>
+#include <SahomNetwork/Messages.h>
+
+#include <queue>
 
 namespace SahomNetwork {
 
 class Network;
 class DiscoveryHandlers: public Handlers {
 public:
-						DiscoveryHandlers();
-	virtual 			~DiscoveryHandlers();
+												DiscoveryHandlers();
+												DiscoveryHandlers(DeviceUID UID);
+												DiscoveryHandlers(const DiscoveryHandlers& other);
+												DiscoveryHandlers(DiscoveryHandlers&& other);
+	virtual 									~DiscoveryHandlers();
 
 public:
-	virtual bool		hasHandler(uint16_t command);
-	virtual void		callHandler(struct CommonHeader &header);
-
-	virtual Handlers	*clone() const;
+	static DiscoveryHandlers					*getLastInstance();
 
 public:
-	void				scanHandler();
-	void				scanResponseHandler(struct CommonHeader &header);
+	bool										hasUID();
+	bool										isUID(DeviceUID &other);
+	virtual bool								hasHandler(uint16_t command);
+	virtual void								callHandler(const struct CommonHeader &header, struct in6_addr &addr) override;
+
+	virtual Handlers							*clone() const;
+
+public:
+	bool										lookup(DeviceUID &uid, struct in6_addr *buffer);
+	void										whoIs(DeviceUID &uid, void (*callback)(struct in6_addr));
 
 private:
-	Network				*m_networkInstance;
+	void										scanHandler();
+	void										scanResponseHandler(const struct CommonHeader &header);
+	void										whoIsHandler(const struct CommonHeader &header, struct in6_addr &addr);
+	void										whoIsResponseHandler(const struct CommonHeader &header, struct in6_addr &addr);
+
+private:
+	bool										compareUIDS(DeviceUID &a, DeviceUID &b);
+
+private:
+	static DiscoveryHandlers					*m_sLastInstance;
+
+private:
+	Network										*m_networkInstance;
+	DeviceUID									m_uid;
+
+	DeviceUID									m_aUnknownDevices[WHO_IS_LIMIT];
+	std::queue<void (*)(struct in6_addr)>		m_aCallBacks[WHO_IS_LIMIT];
 };
 
 } /* namespace SahomNetwork */

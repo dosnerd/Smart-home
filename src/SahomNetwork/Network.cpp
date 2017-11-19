@@ -50,7 +50,10 @@ void Network::destroyInstance() {
 }
 
 Network::Network() :
-		m_settings(0), m_multicastBuffer(), m_multicastListener(), m_handlers()
+		m_settings(0),
+		m_multicastBuffer(),
+		m_multicastListener(),
+		m_handlers()
 {
 	m_multicastListener.setOnAccept(&Network::listener);
 }
@@ -102,15 +105,29 @@ void Network::scan() {
 	flush();
 }
 
-void Network::multicast(struct CommonHeader header, DESTINATION destination) {
+void Network::multicast(struct CommonHeader &header, DESTINATION destination) {
 	SendRequest *request = new SendRequest;
 
 	request->destination = destination;
 	request->message.raw = header.raw;
 	request->message.rawSize = header.rawSize;
+	request->message.UID = header.UID;
 	request->message.structure->version = SAHOM_VERSION;
 
 	m_multicastBuffer.push(request);
+}
+
+void Network::unicast(struct CommonHeader &header, in6_addr &destination) {
+	sockaddr_in6 addr = { 0 };
+	Sockets::ClientSocket socket(SOCK_DGRAM);
+
+	addr.sin6_family = AF_INET6;
+	addr.sin6_port = htons(SAHOM_PORT);
+	addr.sin6_addr = destination;
+
+	socket.setAddress(addr);
+	socket.sendtoAddress(header.raw, header.rawSize);
+	freeHeader(&header);
 }
 
 void Network::flush() {
@@ -129,6 +146,11 @@ void Network::flush() {
 		case DESTINATION::MULTICAST_SIGN_IN_CHANNEL:
 			addr.sin6_addr = SIGN_IN_CHANNEL;
 			break;
+
+		case DESTINATION::MULTICAST_WHO_IS:
+			addr.sin6_addr = WHO_IS_CHANNEL;
+			break;
+
 			default:
 			continue;
 		}
@@ -146,8 +168,11 @@ void Network::flush() {
 
 void Network::listen() {
 	m_multicastListener.bind(SAHOM_PORT);
+
 	m_multicastListener.join(SIGN_IN_CHANNEL, 0);
-	m_settings |= NETWORK_STAY_LISTENING;
+	m_multicastListener.join(WHO_IS_CHANNEL, 0);
+
+	m_stSettings.stayListening = NETWORK_STAY_LISTENING;
 	m_multicastListener.listen();
 }
 
@@ -162,7 +187,7 @@ void Network::listener(int socket) {
 	header.rawSize = GENERAL_BUFFER_SIZE;
 	header.raw = new uint8_t[header.rawSize];
 
-	while (getInstance()->m_settings & NETWORK_STAY_LISTENING) {
+	do {
 		if ((nBytes = ::recvfrom(socket, header.raw, header.rawSize, 0, (struct sockaddr *) &addr, &addressLength)) < 0) {
 			ERROR("NETWORK", "Reading stream error: ");
 			getInstance()->stopListening();
@@ -177,21 +202,34 @@ void Network::listener(int socket) {
 
 				for (i = 0; i < getInstance()->m_handlers.size(); ++i) {
 					if (getInstance()->m_handlers[i]->hasHandler(standardMessage.structure->command)) {
-						getInstance()->m_handlers[i]->callHandler(header);
+						getInstance()->m_handlers[i]->callHandler(header, addr.sin6_addr);
 					}
 				}
 			}
 		}
-	}
+	} while (getInstance()->m_stSettings.stayListening);
 	delete[] header.raw;
 }
 
-void Network::addMessageHandler(Handlers* handler) {
-	m_handlers.push_back(handler->clone());
+void Network::addMessageHandler(Handlers &handler) {
+	m_handlers.push_back(handler.clone());
 }
 
 void Network::stopListening() {
-	m_settings &= ~NETWORK_STAY_LISTENING;
+	m_stSettings.stayListening = 0;
+}
+
+bool Network::isStayListening() {
+	return m_stSettings.stayListening;
+}
+
+bool Network::isConnected() {
+	return m_stSettings.connected;
+}
+
+void Network::setConnected(bool connected) {
+	m_stSettings.connected = connected;
 }
 
 } /* namespace SahomNetwork */
+
