@@ -28,36 +28,22 @@
 
 #include <SahomNetwork/Network.h>
 #include <SahomNetwork/DiscoveryHandlers.h>
+#include <SahomNetwork/SettingsHandler.h>
 #include <SahomNetwork/Messages.h>
 #include "Memoryleak.h"
 #include <thread>
 #include <unistd.h>
+
+#ifdef MANAGER
+#include <string>
+#include <cstring>
+#endif
 
 Memory_leak Memory_leak::current;
 
 void start(SahomNetwork::DeviceUID uid);
 void setup(void *temp);
 void loop();
-
-void setup(void *temp) {
-	(void)temp;
-	SahomNetwork::DiscoveryHandlers *disc = SahomNetwork::DiscoveryHandlers::getLastInstance();
-	uint8_t buffer[2];
-	SahomNetwork::DeviceUID uid;
-	uid.rawSize = 2;
-	uid.raw = buffer;
-	uid.structure->size = 1;
-	uid.structure->UID[0] = 12;
-
-
-	disc->whoIs(uid, [](struct in6_addr addr){
-		LOG("MAIN", "Callback function");
-		(void)addr;
-	});
-}
-
-void loop() {
-}
 
 int main(int nArgs, char* args[]) {
 	SahomNetwork::DeviceUID uid;
@@ -105,21 +91,25 @@ void startListening() {
 	}
 }
 
+#ifdef SIGN_UP
+
 void start(SahomNetwork::DeviceUID uid) {
 	uint16_t i = 0;
 	SahomNetwork::Network *instance = SahomNetwork::Network::getInstance();
 	std::thread server(startListening);
 	SahomNetwork::DiscoveryHandlers discovery(uid);
+	SahomNetwork::SettingsHandler settings;
 
 	try {
 		LOG("MAIN", "Current network: '" << instance->getNetworkName() << "'");
 
 		instance->addMessageHandler(discovery);
-		SahomNetwork::DiscoveryHandlers::getLastInstance()->scan();
+		instance->addMessageHandler(settings);
 
-		//make sure it won't react on it own scan request (faking connecting to system)
-		sleep(1);
-		instance->setConnected(true);
+		while (!instance->isConnected()) {
+			sleep(1);
+			//WARNING: this period not able to send multicast message!
+		}
 
 		setup(nullptr);
 		while (instance->isConnected()) {
@@ -131,11 +121,11 @@ void start(SahomNetwork::DeviceUID uid) {
 			}
 
 #ifdef CYGWIN
-		sleep(2);
-		i = 6000;
+			sleep(2);
+			i = 6000;
 #endif
 #ifdef LINUX
-		usleep(200);
+			usleep(200);
 #endif
 
 		}
@@ -156,3 +146,149 @@ void start(SahomNetwork::DeviceUID uid) {
 	instance->flush();
 	instance->destroyInstance();
 }
+
+void setup(void *temp) {
+	(void) temp;
+	SahomNetwork::DiscoveryHandlers *disc = SahomNetwork::DiscoveryHandlers::getLastInstance();
+	uint8_t buffer[2];
+	SahomNetwork::DeviceUID uid;
+	uid.rawSize = 2;
+	uid.raw = buffer;
+	uid.structure->size = 1;
+	uid.structure->UID[0] = 12;
+
+	disc->whoIs(uid, [](struct in6_addr addr) {
+				LOG("MAIN", "Callback function");
+				(void)addr;
+			});
+}
+
+void loop() {
+}
+
+#endif
+
+#ifdef MANAGER
+
+void start(SahomNetwork::DeviceUID uid) {
+	SahomNetwork::Network *instance = SahomNetwork::Network::getInstance();
+	std::thread server(startListening);
+	SahomNetwork::DiscoveryHandlers discovery(uid);
+	SahomNetwork::SettingsHandler settings;
+
+	try {
+		LOG("MAIN", "Current network: '" << instance->getNetworkName() << "'");
+
+		instance->addMessageHandler(discovery);
+		instance->setConnected(true);
+
+		setup(nullptr);
+		while (instance->isConnected()) {
+			loop();
+		}
+		LOG("MAIN", "Last receive");
+
+		instance->flush();
+		instance->stopListening();
+
+	} catch (ERRORS &err) {
+		ERROR("MAIN", "E" << err << std::endl << "errno: " << errno);
+	} catch (...) {
+		ERROR("MAIN", "Unexpected error");
+	}
+
+	server.join();
+
+	usleep(500 * 1000);
+
+	instance->flush();
+	instance->destroyInstance();
+}
+
+void setup(void *temp) {
+	(void) temp;
+}
+
+void setName() {
+	SahomNetwork::Network *instance = SahomNetwork::Network::getInstance();
+	struct SahomNetwork::CommonHeader header;
+	struct SahomNetwork::StandardMessage message;
+	std::string name;
+
+	std::cout << "Name: ";
+	std::cin >> name;
+
+	instance->CreateMessage((SahomNetwork::Message *) &message, sizeof(*message.structure) + 2 + name.length());
+	message.structure->command = STANDARD_MESSAGE_COMMAND_SETTINGS;
+	message.structure->nParameters = 2 + name.length();
+	message.structure->parameters[0] = 1;
+	std::memcpy(message.structure->parameters + 1, name.c_str(), name.length() + 1);
+
+	instance->InitHeader(&header, message.raw, message.rawSize);
+	header.structure->type = MESSAGE_TYPE_STANDARD;
+	instance->freeMessage((SahomNetwork::Message *) &message);
+	instance->multicast(header, SahomNetwork::Network::DESTINATION::MULTICAST_SIGN_IN_CHANNEL);
+	LOG("MAIN", "Request in queue");
+}
+
+void setConnected() {
+	SahomNetwork::Network *instance = SahomNetwork::Network::getInstance();
+	struct SahomNetwork::CommonHeader header;
+	struct SahomNetwork::StandardMessage message;
+	uint16_t val = 2;
+
+	while (val > 1) {
+		std::cout << "0/1: ";
+		std::cin >> val;
+	}
+
+	instance->CreateMessage((SahomNetwork::Message *) &message, sizeof(*message.structure) + 2);
+	message.structure->command = STANDARD_MESSAGE_COMMAND_SETTINGS;
+	message.structure->nParameters = 2;
+	message.structure->parameters[0] = 2;
+	message.structure->parameters[1] = val;
+
+	instance->InitHeader(&header, message.raw, message.rawSize);
+	header.structure->type = MESSAGE_TYPE_STANDARD;
+	instance->freeMessage((SahomNetwork::Message *) &message);
+	instance->multicast(header, SahomNetwork::Network::DESTINATION::MULTICAST_SIGN_IN_CHANNEL);
+	LOG("MAIN", "Request in queue");
+}
+
+void settings() {
+	std::string command;
+	LOG("MAIN", "SETTINGS");
+
+	std::cin >> command;
+
+	if (command == "set_name") {
+		setName();
+	} else if (command == "set_connected") {
+		setConnected();
+	} else {
+		WARNING("MAIN", "UNKNOWN COMMAND");
+	}
+}
+
+void loop() {
+	SahomNetwork::Network *instance = SahomNetwork::Network::getInstance();
+	std::string command;
+
+	std::cin >> command;
+
+	if (command == "stop") {
+		instance->setConnected(false);
+	} else if (command == "flush") {
+		instance->flush();
+		LOG("MAIN", "FLUSHED");
+	} else if (command == "scan") {
+		SahomNetwork::DiscoveryHandlers::getLastInstance()->scan();
+		LOG("MAIN", "SCANNED");
+	} else if (command == "settings") {
+		settings();
+	} else {
+		WARNING("MAIN", "UNKNOWN COMMAND");
+	}
+}
+
+#endif

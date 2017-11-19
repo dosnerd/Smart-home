@@ -225,5 +225,14 @@ void Network::setConnected(bool connected) {
 	m_stSettings.connected = connected;
 }
 
+void Network::setNetworkName(uint8_t *name){
+	uint8_t i;
+	for (i = 0; i < 30; ++i) {
+		m_networkName[i] = name[i];
+		if (name[i] == '\0')
+			return;
+	}
+}
+
 } /* namespace SahomNetwork */
 

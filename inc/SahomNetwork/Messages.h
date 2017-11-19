@@ -49,9 +49,9 @@ struct CommonHeader {
 			uint8_t		networkName[30] = { 0 }; 	// ASCII null terminated string
 			uint8_t		version = SAHOM_VERSION; 	// Version of SaHoM that sender runs
 			struct {
-				char		all_networks	: 1;
-				char		require_confirm : 1;
-				char		received		: 1;
+				uint8_t		all_networks	: 1;
+				uint8_t		require_confirm : 1;
+				uint8_t		received		: 1;
 			} 			option = { 0 };
 			uint8_t		type;						// Type of payload
 			uint16_t	size;						// Length payload
@@ -78,7 +78,7 @@ struct Message {
 #define STANDARD_MESSAGE_COMMAND_SIGN_IN		2
 #define STANDARD_MESSAGE_COMMAND_WHO_IS			3
 
-#define STANDARD_MESSAGE_COMMAND_
+#define STANDARD_MESSAGE_COMMAND_SETTINGS		4
 
 struct StandardMessage {
 	union {

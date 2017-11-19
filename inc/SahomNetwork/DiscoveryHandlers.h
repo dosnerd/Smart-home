@@ -46,10 +46,10 @@ public:
 public:
 	bool										hasUID();
 	bool										isUID(DeviceUID &other);
-	virtual bool								hasHandler(uint16_t command);
+	virtual bool								hasHandler(uint16_t command) override;
 	virtual void								callHandler(const struct CommonHeader &header, struct in6_addr &addr) override;
 
-	virtual Handlers							*clone() const;
+	virtual Handlers							*clone() const override;
 
 public:
 	void										scan();

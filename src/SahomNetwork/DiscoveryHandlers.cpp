@@ -153,6 +153,7 @@ void DiscoveryHandlers::scanHandler() {
 
 	m_networkInstance->InitHeader(&header, message.raw, message.rawSize);
 	header.structure->type = MESSAGE_TYPE_STANDARD;
+	header.structure->option.all_networks = 1;
 	header.structure->option.received = 1;
 	m_networkInstance->freeMessage((Message *) &message);
 

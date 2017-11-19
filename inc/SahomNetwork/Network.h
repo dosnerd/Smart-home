@@ -63,6 +63,7 @@ public:
 	const uint8_t				*getNetworkName() const;
 
 	void						setConnected(bool connected);
+	void						setNetworkName(uint8_t *name);
 
 
 private:
@@ -86,7 +87,7 @@ private:
 		} 						m_stSettings;
 		uint8_t					m_settings;
 	};
-	uint8_t 					m_networkName[30] = {'M', 'y', ' ', 'S', 'a', 'h', 'o', 'm', ' ', '#', '2',  0};
+	uint8_t 					m_networkName[30] = {'M', 'y', ' ', 'S', 'a', 'h', 'o', 'm', ' ', '#', '0',  0};
 	std::queue<SendRequest *>	m_multicastBuffer;
 	Sockets::Multicast			m_multicastListener;
 
